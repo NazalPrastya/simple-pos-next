@@ -63,4 +63,17 @@ export const productRouter = createTRPCRouter({
     }
     return data;
   }),
+
+  deleteProductById: protectedProcedure
+    .input(
+      z.object({
+        productId: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { db } = ctx;
+      await db.product.delete({
+        where: { id: input.productId },
+      });
+    }),
 });

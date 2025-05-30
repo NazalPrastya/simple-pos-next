@@ -7,16 +7,16 @@ import {
 import type { NextPageWithLayout } from "../_app";
 import { useState, type ReactElement } from "react";
 import { Button } from "@/components/ui/button";
-import { PRODUCTS } from "@/data/mock";
-import { ProductMenuCard } from "@/components/shared/product/ProductMenuCard";
 import { ProductCatalogCard } from "@/components/shared/product/ProductCatalogCard";
 import { api } from "@/utils/api";
 import {
   AlertDialog,
   AlertDialogCancel,
   AlertDialogContent,
+  AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
+  AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { ProductForm } from "@/components/shared/product/ProductForm";
@@ -29,6 +29,8 @@ const ProductsPage: NextPageWithLayout = () => {
   const [open, setOpen] = useState(false);
   const apiUtils = api.useUtils();
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
+  const [productToDelete, setProductToDelete] = useState<string | null>(null);
+
   const createProductForm = useForm<ProductFormSchema>({
     resolver: zodResolver(productFormSchema),
   });
@@ -54,6 +56,24 @@ const ProductsPage: NextPageWithLayout = () => {
   };
   const { data: products } = api.product.getProducts.useQuery();
 
+  const { mutate: deleteProductById } =
+    api.product.deleteProductById.useMutation({
+      onSuccess: async () => {
+        await apiUtils.product.getProducts.invalidate();
+        alert("Product deleted successfully");
+        setProductToDelete(null);
+      },
+    });
+  const handleClickDeleteProduct = (productId: string) => {
+    setProductToDelete(productId);
+  };
+
+  const handleCofirmDeleteProduct = () => {
+    if (!productToDelete) return;
+    deleteProductById({
+      productId: productToDelete,
+    });
+  };
   return (
     <>
       <DashboardHeader>
@@ -105,10 +125,35 @@ const ProductsPage: NextPageWithLayout = () => {
             image={product.imageUrl ?? ""}
             category={product.category.name}
             onEdit={() => void 0}
-            onDelete={() => void 0}
+            onDelete={() => handleClickDeleteProduct(product.id)}
           />
         ))}
       </div>
+
+      <AlertDialog
+        open={!!productToDelete}
+        onOpenChange={(open) => {
+          if (!open) {
+            setProductToDelete(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Product</AlertDialogTitle>
+          </AlertDialogHeader>
+          <AlertDialogDescription>
+            Are you sure you want to delete this product? This action cannot be
+            undone.
+          </AlertDialogDescription>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <Button variant="destructive" onClick={handleCofirmDeleteProduct}>
+              Delete
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
